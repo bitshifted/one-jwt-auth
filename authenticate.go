@@ -20,6 +20,7 @@ type authentication struct {
 }
 
 func main() {
+	common.InitLogger()
 	fmt.Print("Running auth")
 	reader := bufio.NewReader(os.Stdin)
 	text, _ := reader.ReadString('\n')

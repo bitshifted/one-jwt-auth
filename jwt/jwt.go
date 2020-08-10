@@ -22,7 +22,7 @@ func Validate(encodedToken string) bool {
 	parts := strings.Split(encodedToken, ".")
 	jwtHeader := common.ConvertToJSON(parts[0])
 	keyID := jwtHeader["kid"].(string)
-	fmt.Println("Key ID: " + keyID)
+	common.Logger.Info("Key ID: " + keyID)
 
 	jwtPayload := common.ConvertToJSON(parts[1])
 	// check if token is expired
