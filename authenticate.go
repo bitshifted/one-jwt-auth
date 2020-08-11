@@ -21,24 +21,27 @@ type authentication struct {
 
 func main() {
 	common.InitLogger()
-	fmt.Print("Running auth")
+	common.Logger.Info("Running authentication")
 	reader := bufio.NewReader(os.Stdin)
 	text, _ := reader.ReadString('\n')
-	fmt.Println(text)
+	common.Logger.Debug(text)
 
 	var data authentication
 	xml.Unmarshal([]byte(text), &data)
-	fmt.Println(data.Secret)
 
 	valid := jwt.Validate(data.Secret)
-	fmt.Println(fmt.Sprintf("Valid signature: %t", valid))
+	common.Logger.Info(fmt.Sprintf("Valid signature: %t", valid))
+	if !valid {
+		os.Exit(20)
+	}
 	// check if username from token matches one from input
 	parts := strings.Split(data.Secret, ".")
 	payloadJSON := common.ConvertToJSON(parts[1])
 	username := payloadJSON["preferred_username"].(string)
-	fmt.Println("Username from JSON: " + username)
+	common.Logger.Debug("Username from JSON: " + username)
 	if data.Username != username {
-		fmt.Println("Usernames mismtach")
+		common.Logger.Error("Usernames mismatch")
+		os.Exit(10)
 	}
 
 	fmt.Println("jwt " + username + " secret")

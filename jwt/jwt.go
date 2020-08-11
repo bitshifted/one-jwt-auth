@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
-	"log"
 	"math/big"
 	"strings"
 	"time"
@@ -28,12 +27,13 @@ func Validate(encodedToken string) bool {
 	// check if token is expired
 	tokenHasExpired := isTokenExpired(jwtPayload)
 	if tokenHasExpired {
-		fmt.Println("Token has expired")
+		common.Logger.Error("Token has expired")
+		return false
 	}
 	// verify signature
 	key, err := jwks.GetSigningKey(keyID, parts[1])
 	if err != nil {
-		log.Fatal("Could not get signing key")
+		common.Logger.Error(fmt.Sprintf("Could not get signing key: %s", err.Error()))
 		return false
 	}
 	// based on https://medium.com/@software_factotum/validating-rsa-signature-for-a-jws-10229fb46bbf
@@ -58,7 +58,7 @@ func Validate(encodedToken string) bool {
 
 	err = rsa.VerifyPKCS1v15(publicKey, crypto.SHA256, hasher.Sum(nil), signature)
 	if err != nil {
-		fmt.Println("Invalid signature")
+		common.Logger.Error("Invalid signature")
 		return false
 	}
 

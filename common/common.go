@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/sirupsen/logrus"
@@ -16,13 +15,15 @@ var Logger = logrus.New()
 // ConvertToJSON converts base64 encoded string into JSON
 func ConvertToJSON(encodedData string) map[string]interface{} {
 	data, err := base64.RawURLEncoding.DecodeString(encodedData)
-	if err != nil {
-		log.Fatal("Failed to decode JWT data")
-	}
 	var result map[string]interface{}
+	if err != nil {
+		Logger.Error("Failed to decode encoded data: " + err.Error())
+		return result
+	}
+
 	dec := json.NewDecoder(bytes.NewReader(data))
 	if err := dec.Decode(&result); err != nil {
-		log.Fatal("Failed to decode JSON")
+		Logger.Error("Failed to decode JSON: " + err.Error())
 	}
 	return result
 }
@@ -33,6 +34,6 @@ func InitLogger() {
 		fmt.Println("Could Not Open Log File : " + err.Error())
 	}
 	Logger.SetOutput(file)
-
+	Logger.SetLevel(logrus.DebugLevel)
 	Logger.SetFormatter(&logrus.TextFormatter{})
 }

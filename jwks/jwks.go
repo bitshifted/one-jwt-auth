@@ -42,11 +42,11 @@ func GetSigningKey(keyID string, jwtPayloadEncoded string) (JWK, error) {
 		key, err = getKeyFromFile(fmt.Sprintf(keyCachePath, keyID), keyID)
 	} else {
 		oidcConfigURL := getOIDCConfigURL(jwtPayloadEncoded)
-		fmt.Println("OIDC uRL: " + oidcConfigURL)
+		common.Logger.Debug("OIDC URL: " + oidcConfigURL)
 		jwksURL := getJWKSUrl(oidcConfigURL)
-		fmt.Println("JWKS uRL: " + jwksURL)
+		common.Logger.Debug("JWKS URL: " + jwksURL)
 		cachedKeyFile := downloadJwksJSON(jwksURL)
-		fmt.Println("Cache key file: " + cachedKeyFile)
+		common.Logger.Debug("Cached key file: " + cachedKeyFile)
 		key, err = getKeyFromFile(cachedKeyFile, keyID)
 	}
 	return key, err
@@ -56,6 +56,7 @@ func checkIfKeyIsCached(keyID string) bool {
 	filePath := fmt.Sprintf(keyCachePath, keyID)
 	_, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
+		common.Logger.Info("Cached key file not found")
 		return false
 	}
 	return true
@@ -65,12 +66,14 @@ func getKeyFromFile(keyFilePath string, keyID string) (JWK, error) {
 
 	jwksFile, err := os.Open(keyFilePath)
 	if err != nil {
-		fmt.Println("Failed to open JWKS file")
+		common.Logger.Error("Failed to open JWKS file: " + err.Error())
+		return JWK{}, err
 	}
 	dec := json.NewDecoder(jwksFile)
 	var jwks JWKS
 	if err := dec.Decode(&jwks); err != nil {
-		fmt.Println("Could not decode JWKS")
+		common.Logger.Error("Could not decode JWKS file: " + err.Error())
+		return JWK{}, err
 	}
 	// loop through keys and find one with supplied ID
 	for i := range jwks.Keys {
@@ -88,26 +91,10 @@ func getOIDCConfigURL(encodedPayload string) string {
 }
 
 func getJWKSUrl(oidcConfigURL string) string {
-	httpClient := http.Client{
-		Timeout: time.Second * 2, // Timeout after 2 seconds
-	}
 
-	req, err := http.NewRequest(http.MethodGet, oidcConfigURL, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	res, getErr := httpClient.Do(req)
-	if getErr != nil {
-		log.Fatal(getErr)
-	}
-
-	if res.Body != nil {
-		defer res.Body.Close()
-	}
-
-	body, readErr := ioutil.ReadAll(res.Body)
+	body, readErr := doDownload(oidcConfigURL)
 	if readErr != nil {
-		log.Fatal(readErr)
+		common.Logger.Error(readErr)
 	}
 	var result map[string]interface{}
 	dec := json.NewDecoder(bytes.NewReader(body))
@@ -118,26 +105,10 @@ func getJWKSUrl(oidcConfigURL string) string {
 }
 
 func downloadJwksJSON(url string) string {
-	httpClient := http.Client{
-		Timeout: time.Second * 2, // Timeout after 2 seconds
-	}
 
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	res, getErr := httpClient.Do(req)
-	if getErr != nil {
-		log.Fatal(getErr)
-	}
-
-	if res.Body != nil {
-		defer res.Body.Close()
-	}
-
-	body, readErr := ioutil.ReadAll(res.Body)
+	body, readErr := doDownload(url)
 	if readErr != nil {
-		log.Fatal(readErr)
+		common.Logger.Error(readErr)
 	}
 	var keys JWKS
 	jsonErr := json.Unmarshal(body, &keys)
@@ -163,4 +134,32 @@ func downloadJwksJSON(url string) string {
 	}
 	return cacheFilePath
 
+}
+
+func doDownload(url string) ([]byte, error) {
+	httpClient := http.Client{
+		Timeout: time.Second * 2, // Timeout after 2 seconds
+	}
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		common.Logger.Error(err)
+		return nil, err
+	}
+	res, getErr := httpClient.Do(req)
+	if getErr != nil {
+		common.Logger.Error(getErr)
+		return nil, getErr
+	}
+
+	if res.Body != nil {
+		defer res.Body.Close()
+	}
+
+	body, readErr := ioutil.ReadAll(res.Body)
+	if readErr != nil {
+		common.Logger.Error(readErr)
+		return nil, readErr
+	}
+	return body, nil
 }
