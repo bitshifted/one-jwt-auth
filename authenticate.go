@@ -30,7 +30,7 @@ func main() {
 	var data authentication
 	xml.Unmarshal([]byte(text), &data)
 
-	valid := jwt.Validate(data.Password)
+	valid := jwt.Validate(data.Secret)
 	common.Logger.Info(fmt.Sprintf("Valid signature: %t", valid))
 	if !valid {
 		os.Exit(20)
