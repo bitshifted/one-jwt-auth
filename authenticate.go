@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	_ "crypto/sha256"
 	"encoding/xml"
 	"fmt"
@@ -23,7 +24,7 @@ func main() {
 	common.InitLogger()
 	common.Logger.Info("Running authentication")
 	reader := bufio.NewReader(os.Stdin)
-	text, _ := reader.ReadString('\n')
+	text := readAuthcenticationData(*reader)
 	common.Logger.Debug(text)
 
 	var data authentication
@@ -45,5 +46,22 @@ func main() {
 	}
 
 	fmt.Println("jwt " + username + " secret")
+
+}
+
+func readAuthcenticationData(reader bufio.Reader) string {
+	text, _ := reader.ReadString('\n')
+	buf := bytes.Buffer{}
+	// expect input to be in multiple lines
+	for text != "\n" {
+		common.Logger.Debug("STDIN: " + text)
+		buf.WriteString(strings.TrimSpace(text))
+		// if we got whole input, get out
+		if strings.HasPrefix(buf.String(), "<AUTHN>") && strings.HasSuffix(buf.String(), "</AUTHN>") {
+			break
+		}
+		text, _ = reader.ReadString('\n')
+	}
+	return strings.TrimSpace(buf.String())
 
 }
