@@ -30,7 +30,7 @@ func main() {
 	var data authentication
 	xml.Unmarshal([]byte(text), &data)
 
-	valid := jwt.Validate(data.Secret)
+	valid := jwt.Validate(data.Password)
 	common.Logger.Info(fmt.Sprintf("Valid signature: %t", valid))
 	if !valid {
 		os.Exit(20)
@@ -57,8 +57,7 @@ func readAuthcenticationData(reader bufio.Reader) string {
 		common.Logger.Debug("STDIN: " + text)
 		buf.WriteString(strings.TrimSpace(text))
 		// if we got whole input, get out
-		if strings.HasPrefix(text, "<AUTHN>") && strings.HasSuffix(strings.TrimSpace(text), "</AUTHN>") {
-			common.Logger.Debug("Got whole input in one line, breaking out")
+		if strings.HasPrefix(buf.String(), "<AUTHN>") && strings.HasSuffix(buf.String(), "</AUTHN>") {
 			break
 		}
 		text, _ = reader.ReadString('\n')
